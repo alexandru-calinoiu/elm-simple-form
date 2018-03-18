@@ -3,6 +3,9 @@ module Main exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onSubmit, onInput)
+import Http
+import Json.Decode as Decode
+import Json.Encode as Encode
 
 
 type alias Model =
@@ -24,6 +27,7 @@ type Msg
     = InputEmail String
     | InputMessage String
     | Submit
+    | SubmitResponse (Result Http.Error ())
 
 
 main : Program Never Model Msg
@@ -46,7 +50,32 @@ update msg model =
             ( { model | message = message }, Cmd.none )
 
         Submit ->
-            ( { model | submitting = True }, Cmd.none )
+            ( { model | submitting = True }, submit model )
+
+        SubmitResponse result ->
+            let _ = Debug.log "result" result
+            in (model, Cmd.none)
+
+
+submit : Model -> Cmd Msg
+submit model =
+    let
+        url =
+            "http://localhost:9292/api/contact"
+
+        json =
+            Encode.object
+                [ ( "email", Encode.string model.email )
+                , ( "message", Encode.string model.message )
+                ]
+
+        decoder = Decode.succeed ()
+
+        request : Http.Request ()
+        request =
+            Http.post url (Http.jsonBody json) decoder  
+    in
+        request |> Http.send SubmitResponse
 
 
 view : Model -> Html Msg
@@ -92,6 +121,6 @@ body model =
 footer : Html Msg
 footer =
     div []
-        [ button [ type_ "submit" ] [ text "Submit" ] 
+        [ button [ type_ "submit" ] [ text "Submit" ]
         , button [ type_ "button" ] [ text "Concel" ]
         ]
