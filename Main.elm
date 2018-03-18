@@ -6,6 +6,7 @@ import Html.Events exposing (onSubmit, onInput)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Validation exposing (..)
 
 
 type alias Model =
@@ -57,31 +58,46 @@ update msg model =
             ( { model | message = message }, Cmd.none )
 
         Submit ->
+            (submitIfValid model)
+
+        SubmitResponse (Ok ()) ->
             ( { model
-                | status = InProgress
+                | status = Succeeded
                 , email = ""
                 , message = ""
               }
-            , submit model
+            , Cmd.none
             )
-
-        SubmitResponse (Ok ()) ->
-            ( { model | status = Succeeded }, Cmd.none )
 
         SubmitResponse (Err _) ->
             ( { model | status = Failed }, Cmd.none )
 
 
-submit : Model -> Cmd Msg
-submit model =
+submitIfValid : Model -> ( Model, Cmd Msg )
+submitIfValid model =
+    let
+        submissionResult =
+            Result.map2
+                submit
+                (model.email |> isEmail)
+                (model.message |> isNotEmpty)
+    in
+        case submissionResult of
+            Ok cmd ->
+                ( { model | status = InProgress }, cmd )
+            Err _ ->
+                (model, Cmd.none)
+
+submit : String -> String -> Cmd Msg
+submit email message =
     let
         url =
             "http://localhost:9292/api/contact"
 
         json =
             Encode.object
-                [ ( "email", Encode.string model.email )
-                , ( "message", Encode.string model.message )
+                [ ( "email", Encode.string email )
+                , ( "message", Encode.string message )
                 ]
 
         decoder =
@@ -97,7 +113,9 @@ submit model =
 view : Model -> Html Msg
 view model =
     Html.form
-        [ onSubmit Submit ]
+        [ onSubmit Submit
+        , novalidate True
+        ]
         [ header model
         , body model
         , footer model
