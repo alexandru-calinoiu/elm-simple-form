@@ -12,6 +12,7 @@ import Validation exposing (..)
 type alias Model =
     { email : Field String
     , message : Field String
+    , age : Field Int
     , status : SubmissionStatus
     }
 
@@ -28,6 +29,7 @@ initialModel : Model
 initialModel =
     { email = NotValidated ""
     , message = NotValidated ""
+    , age = NotValidated ""
     , status = NotSubmitted
     }
 
@@ -35,6 +37,7 @@ initialModel =
 type Msg
     = InputEmail String
     | InputMessage String
+    | InputAge String
     | Submit
     | SubmitResponse (Result Http.Error ())
 
@@ -58,6 +61,9 @@ update msg model =
         InputMessage message ->
             ( { model | message = NotValidated message }, Cmd.none )
 
+        InputAge age ->
+            ( { model | age = NotValidated age }, Cmd.none )
+
         Submit ->
             model |> validateModel |> submitIfValid
 
@@ -66,6 +72,7 @@ update msg model =
                 | status = Succeeded
                 , email = NotValidated ""
                 , message = NotValidated ""
+                , age = NotValidated ""
               }
             , Cmd.none
             )
@@ -79,6 +86,7 @@ validateModel model =
     { model
         | email = model.email |> validate (isNotEmpty >=> isEmail)
         , message = model.message |> validate isNotEmpty
+        , age = model.age |> validate isNatural
     }
 
 
@@ -86,10 +94,10 @@ submitIfValid : Model -> ( Model, Cmd Msg )
 submitIfValid model =
     let
         submissionResult =
-            Validation.map2
-                submit
-                (model.email)
-                (model.message)
+            Valid submit
+            |> apply model.email
+            |> apply model.message
+            |> apply model.age
     in
         case submissionResult of
             Valid cmd ->
@@ -99,8 +107,8 @@ submitIfValid model =
                 ( { model | status = NotValid }, Cmd.none )
 
 
-submit : String -> String -> Cmd Msg
-submit email message =
+submit : String -> String -> Int -> Cmd Msg
+submit email message age =
     let
         url =
             "http://localhost:9292/api/contact"
@@ -109,6 +117,7 @@ submit email message =
             Encode.object
                 [ ( "email", Encode.string email )
                 , ( "message", Encode.string message )
+                , ( "age", Encode.int age )
                 ]
 
         decoder =
@@ -213,6 +222,16 @@ body model =
                 ]
                 []
             , errorLabel model.message
+            ]
+        , div []
+            [ input
+                [ placeholder "your age"
+                , type_ "number"
+                , onInput InputAge
+                , value (model.age |> displayValue toString)
+                ]
+                []
+            , errorLabel model.age
             ]
         ]
 

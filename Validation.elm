@@ -7,8 +7,8 @@ type Field field
     | Invalid String String
 
 
-type alias Validator input output =
-    input -> Result String output
+type alias Validator a b =
+    a -> Result String b
 
 
 (>=>) : Validator a b -> Validator b c -> Validator a c
@@ -36,8 +36,8 @@ validate validator field =
             field
 
 
-map2 : (a -> b -> c) -> Field a -> Field b -> Field c
-map2 f fa fb =
+apply : Field a -> Field (a -> b) -> Field b
+apply fa ff =
     case fa of
         NotValidated s ->
             NotValidated s
@@ -46,15 +46,15 @@ map2 f fa fb =
             Invalid err s
 
         Valid a ->
-            case fb of
+            case ff of
                 NotValidated s ->
                     NotValidated s
 
                 Invalid err s ->
                     Invalid err s
 
-                Valid b ->
-                    f a b |> Valid
+                Valid f ->
+                    f a |> Valid
 
 
 isNotEmpty : Validator String String
@@ -85,6 +85,7 @@ isPositive i =
     else
         Err "I'm expecting a positive integer"
 
-isNatural : a -> Validator String Int
-isNatural i =
+
+isNatural : Validator String Int
+isNatural =
     isInt >=> isPositive
