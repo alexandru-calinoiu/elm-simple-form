@@ -11,15 +11,22 @@ import Json.Encode as Encode
 type alias Model =
     { email : String
     , message : String
-    , submitting : Bool
+    , status : SubmissionStatus
     }
+
+
+type SubmissionStatus
+    = NotSubmitted
+    | InProgress
+    | Succeeded
+    | Failed
 
 
 initialModel : Model
 initialModel =
     { email = ""
     , message = ""
-    , submitting = False
+    , status = NotSubmitted
     }
 
 
@@ -50,11 +57,13 @@ update msg model =
             ( { model | message = message }, Cmd.none )
 
         Submit ->
-            ( { model | submitting = True }, submit model )
+            ( { model | status = InProgress }, submit model )
 
-        SubmitResponse result ->
-            let _ = Debug.log "result" result
-            in (model, Cmd.none)
+        SubmitResponse (Ok ()) ->
+            ( { model | status = Succeeded }, Cmd.none )
+
+        SubmitResponse (Err _) ->
+            ( { model | status = Failed }, Cmd.none )
 
 
 submit : Model -> Cmd Msg
@@ -69,11 +78,12 @@ submit model =
                 , ( "message", Encode.string model.message )
                 ]
 
-        decoder = Decode.succeed ()
+        decoder =
+            Decode.succeed ()
 
         request : Http.Request ()
         request =
-            Http.post url (Http.jsonBody json) decoder  
+            Http.post url (Http.jsonBody json) decoder
     in
         request |> Http.send SubmitResponse
 
@@ -82,17 +92,35 @@ view : Model -> Html Msg
 view model =
     Html.form
         [ onSubmit Submit ]
-        [ header
+        [ header model
         , body model
         , footer
         , div [] [ model |> toString |> text ]
         ]
 
 
-header : Html msg
-header =
+header : Model -> Html msg
+header model =
     div []
-        [ h1 [] [ text "Contact Us" ] ]
+        [ h1 [] [ text "Contact Us" ]
+        , renderStatus model.status
+        ]
+
+
+renderStatus : SubmissionStatus -> Html msg
+renderStatus status =
+    case status of
+        NotSubmitted ->
+            div [] []
+
+        InProgress ->
+            div [] [ text "Your request is being submitted" ]
+
+        Succeeded ->
+            div [] [ text "Your request was ok" ]
+
+        Failed ->
+            div [] [ text "Your request failed" ]
 
 
 body : Model -> Html Msg
