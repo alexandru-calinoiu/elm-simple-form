@@ -74,35 +74,37 @@ apply fa ff =
     apply fa ff
 
 
-isNotEmpty : Validator String String
-isNotEmpty value =
+type alias ErrorMessage = String
+
+isNotEmpty : ErrorMessage -> Validator String String
+isNotEmpty err value =
     if value == "" then
-        Err "This field is required"
+        Err err
     else
         Ok value
 
 
-isEmail : Validator String String
-isEmail value =
+isEmail : ErrorMessage -> Validator String String
+isEmail err value =
     if String.contains "@" value then
         Ok value
     else
-        Err "Please enter a valid email"
+        Err err
 
 
-isInt : Validator String Int
-isInt =
-    String.toInt
+isInt : ErrorMessage -> Validator String Int
+isInt err =
+    String.toInt >> (Result.mapError (always err))
 
 
-isPositive : Validator Int Int
-isPositive i =
+isPositive : ErrorMessage -> Validator Int Int
+isPositive err i =
     if i >= 0 then
         Ok i
     else
-        Err "I'm expecting a positive integer"
+        Err err
 
 
-isNatural : Validator String Int
-isNatural =
-    isInt >=> isPositive
+isNatural : ErrorMessage -> Validator String Int
+isNatural err =
+    isInt err >=> isPositive err

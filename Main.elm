@@ -83,10 +83,24 @@ update msg model =
 
 validateModel : Model -> Model
 validateModel model =
+    let
+        emailValidation =
+            isNotEmpty "An email is required" >=> isEmail "Please ensure this is a valid email"
+        email = model.email |> validate emailValidation
+
+        messageValidation =
+            isNotEmpty "An message is required"
+        message = model.message |> validate messageValidation
+
+        ageValidation =
+            optional (isNatural "Age should be a natural number")
+        age = model.age |> validate ageValidation
+    in
+        
     { model
-        | email = model.email |> validate (isNotEmpty >=> isEmail)
-        , message = model.message |> validate isNotEmpty
-        , age = model.age |> validate (optional isNatural)
+        | email = email
+        , message = message
+        , age = age
     }
 
 
@@ -230,7 +244,6 @@ body model =
         , div []
             [ input
                 [ placeholder "your age"
-                , type_ "number"
                 , onInput InputAge
                 , value (model.age |> displayValue (Maybe.map toString >> Maybe.withDefault ""))
                 ]
