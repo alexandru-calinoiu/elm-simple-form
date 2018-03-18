@@ -2,7 +2,7 @@ module Register exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onSubmit, onInput)
+import Html.Events exposing (onBlur, onSubmit, onInput)
 import Validation exposing (..)
 
 
@@ -23,8 +23,11 @@ initialModel =
 
 type Msg
     = InputEmail String
+    | BlurEmail
     | InputPassword String
+    | BlurPassword
     | InputConfirmPassword String
+    | BlurConfirmPassword
     | Submit
 
 emailValidation : Validator String String
@@ -44,11 +47,26 @@ update msg model =
             , Cmd.none
             )
 
+        BlurEmail ->
+            ( { model
+                | email =
+                    model.email
+                        |> validate OnBlur emailValidation
+              }
+            , Cmd.none
+            )
+
         InputPassword password ->
             ( { model | password = field password }, Cmd.none )
 
+        BlurPassword ->
+            ( { model | password = model.password }, Cmd.none )
+
         InputConfirmPassword confirmPassword ->
             ( { model | confirmPassword = field confirmPassword }, Cmd.none )
+
+        BlurConfirmPassword ->
+            ( { model | confirmPassword = model.confirmPassword }, Cmd.none )
 
         Submit ->
             ( model |> validateModel, Cmd.none )
@@ -121,6 +139,7 @@ body model =
                 [ placeholder "Your email *"
                 , type_ "email"
                 , onInput InputEmail
+                , onBlur BlurEmail
                 , value (model.email |> rawValue)
                 ]
                 []
@@ -131,6 +150,7 @@ body model =
                 [ placeholder "Your password *"
                 , type_ "password"
                 , onInput InputPassword
+                , onBlur BlurPassword
                 , value (model.password |> rawValue)
                 ]
                 []
@@ -141,6 +161,7 @@ body model =
                 [ placeholder "Confirm password *"
                 , type_ "password"
                 , onInput InputConfirmPassword
+                , onBlur BlurConfirmPassword
                 , value (model.confirmPassword |> rawValue)
                 ]
                 []

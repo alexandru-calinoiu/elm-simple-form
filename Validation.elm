@@ -9,6 +9,7 @@ type Field raw a
 
 type Event raw
     = OnSubmit
+    | OnBlur
     | OnChange raw
 
 
@@ -66,6 +67,9 @@ optional validate s =
 validate : Event raw -> Validator raw a -> Field raw a -> Field raw a
 validate event validate (Field value validity) =
     case event of
+        OnBlur ->
+            validateAlways validate (Field value validity)
+
         OnSubmit ->
             validateAlways validate (Field value validity)
 
