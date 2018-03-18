@@ -4,7 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onCheck, onSubmit, onInput)
 import Http
-import Json.Decode as Decode
+import Json.Decode as Json
 import Json.Encode as Encode
 import Validation exposing (..)
 
@@ -39,7 +39,7 @@ type Msg
     | InputMessage String
     | CheckAcceptPolicy Bool
     | Submit
-    | SubmitResponse (Result Http.Error ())
+    | SubmitResponse (Result Http.Error ResponseBody)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -57,13 +57,32 @@ update msg model =
         Submit ->
             model |> validateModel |> submitIfValid
 
-        SubmitResponse (Ok ()) ->
-            ( { initialModel | status = Succeeded }
+        SubmitResponse (Ok (Ok ())) ->
+            ( { initialModel | status = Succeeded }, Cmd.none )
+
+        SubmitResponse (Ok (Err errs)) ->
+            ( { model | status = NotSubmitted }
+                |> applyServerValidationErrors errs
             , Cmd.none
             )
 
         SubmitResponse (Err _) ->
             ( { model | status = Failed }, Cmd.none )
+
+
+applyServerValidationErrors : List ServerValidationError -> Model -> Model
+applyServerValidationErrors errs model =
+    let
+        applyError err m =
+            case err of
+                EmailAlreadyRegistered ->
+                    { m
+                        | email =
+                            model.email
+                                |> setError "This email is bad."
+                    }
+    in
+        errs |> List.foldl applyError model
 
 
 validateModel : Model -> Model
@@ -73,16 +92,16 @@ validateModel model =
             isNotEmpty "An email is required" >=> isEmail "Please ensure this is a valid email"
 
         email =
-            model.email |> validate emailValidation
+            model.email |> validate OnSubmit emailValidation
 
         messageValidation =
             isNotEmpty "An message is required"
 
         message =
-            model.message |> validate messageValidation
+            model.message |> validate OnSubmit messageValidation
 
         acceptPolicy =
-            model.acceptPolicy |> validate (isTrue "You must accept policy")
+            model.acceptPolicy |> validate OnSubmit (isTrue "You must accept policy")
     in
         { model
             | email = email
@@ -121,14 +140,49 @@ submit email message acceptPolicy =
                 , ( "acceptPolicy", Encode.bool acceptPolicy )
                 ]
 
-        decoder =
-            Decode.succeed ()
-
-        request : Http.Request ()
+        request : Http.Request ResponseBody
         request =
-            Http.post url (Http.jsonBody json) decoder
+            Http.post url (Http.jsonBody json) decodeResponseBody
     in
         request |> Http.send SubmitResponse
+
+
+decodeResponseBody : Json.Decoder ResponseBody
+decodeResponseBody =
+    Json.map2
+        (\success errs ->
+            if success then
+                Ok ()
+            else
+                Err (errs |> Maybe.withDefault [])
+        )
+        (Json.field "success" Json.bool)
+        (Json.list decodeServerValidationError
+            |> Json.field "errors"
+            |> Json.maybe
+        )
+
+
+decodeServerValidationError : Json.Decoder ServerValidationError
+decodeServerValidationError =
+    Json.string
+        |> Json.andThen
+            (\str ->
+                case str of
+                    "email_already_registered" ->
+                        Json.succeed EmailAlreadyRegistered
+
+                    s ->
+                        Json.fail <| "Unexpected value: " ++ s
+            )
+
+
+type alias ResponseBody =
+    Result (List ServerValidationError) ()
+
+
+type ServerValidationError
+    = EmailAlreadyRegistered
 
 
 view : Model -> Html Msg

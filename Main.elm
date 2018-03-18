@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import Html exposing (program)
-import Register exposing (..)
+import Contact exposing (..)
 
 
 main : Program Never Model Msg

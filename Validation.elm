@@ -21,6 +21,10 @@ rawValue : Field b a -> b
 rawValue (Field rawValue _) =
     rawValue
 
+setError : String -> Field raw validity -> Field raw validity
+setError err (Field value _) =
+    Field value (Invalid err)
+
 
 validity : Field raw a -> Validity a
 validity (Field _ validity) =
