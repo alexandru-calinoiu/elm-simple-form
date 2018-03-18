@@ -18,6 +18,7 @@ type alias Model =
 
 type SubmissionStatus
     = NotSubmitted
+    | NotValid
     | InProgress
     | Succeeded
     | Failed
@@ -76,6 +77,7 @@ update msg model =
 submitIfValid : Model -> ( Model, Cmd Msg )
 submitIfValid model =
     let
+        submissionResult : Result String (Cmd Msg)
         submissionResult =
             Result.map2
                 submit
@@ -85,8 +87,10 @@ submitIfValid model =
         case submissionResult of
             Ok cmd ->
                 ( { model | status = InProgress }, cmd )
+
             Err _ ->
-                (model, Cmd.none)
+                ( { model | status = NotValid }, Cmd.none )
+
 
 submit : String -> String -> Cmd Msg
 submit email message =
@@ -136,6 +140,9 @@ renderStatus status =
     case status of
         NotSubmitted ->
             div [] []
+
+        NotValid ->
+            div [] [ text "Not vaild" ]
 
         InProgress ->
             div [] [ text "Your request is being submitted" ]
