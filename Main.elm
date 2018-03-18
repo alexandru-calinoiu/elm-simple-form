@@ -95,9 +95,9 @@ submitIfValid model =
     let
         submissionResult =
             Valid submit
-            |> apply model.email
-            |> apply model.message
-            |> apply model.age
+            |: model.email
+            |: model.message
+            |: model.age
     in
         case submissionResult of
             Valid cmd ->

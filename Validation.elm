@@ -56,6 +56,8 @@ apply fa ff =
                 Valid f ->
                     f a |> Valid
 
+(|:) : Field (a -> b) -> Field a -> Field b
+(|:) ff fa = apply fa ff
 
 isNotEmpty : Validator String String
 isNotEmpty value =
