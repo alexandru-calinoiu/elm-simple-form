@@ -2,12 +2,13 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput)
+import Html.Events exposing (onSubmit, onInput)
 
 
 type alias Model =
     { email : String
     , message : String
+    , submitting : Bool
     }
 
 
@@ -15,6 +16,7 @@ initialModel : Model
 initialModel =
     { email = ""
     , message = ""
+    , submitting = False
     }
 
 
@@ -44,13 +46,13 @@ update msg model =
             ( { model | message = message }, Cmd.none )
 
         Submit ->
-            ( model, Cmd.none )
+            ( { model | submitting = True }, Cmd.none )
 
 
 view : Model -> Html Msg
 view model =
     Html.form
-        []
+        [ onSubmit Submit ]
         [ header
         , body model
         , footer
@@ -87,7 +89,9 @@ body model =
         ]
 
 
-footer : Html msg
+footer : Html Msg
 footer =
     div []
-        [ button [] [ text "Submit" ] ]
+        [ button [ type_ "submit" ] [ text "Submit" ] 
+        , button [ type_ "button" ] [ text "Concel" ]
+        ]
