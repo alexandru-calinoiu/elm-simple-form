@@ -132,3 +132,10 @@ isPositive err i =
 isNatural : ErrorMessage -> Validator String Int
 isNatural err =
     isInt err >=> isPositive err
+
+isTrue : ErrorMessage -> Validator Bool Bool
+isTrue err value =
+    if value then
+        Ok value
+    else
+        Err err

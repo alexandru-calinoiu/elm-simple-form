@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onSubmit, onInput)
+import Html.Events exposing (onCheck, onSubmit, onInput)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -12,7 +12,7 @@ import Validation exposing (..)
 type alias Model =
     { email : Field String String
     , message : Field String String
-    , age : OptionalField String Int
+    , acceptPolicy : Field Bool Bool
     , status : SubmissionStatus
     }
 
@@ -29,7 +29,7 @@ initialModel : Model
 initialModel =
     { email = field ""
     , message = field ""
-    , age = field ""
+    , acceptPolicy = field False
     , status = NotSubmitted
     }
 
@@ -37,7 +37,7 @@ initialModel =
 type Msg
     = InputEmail String
     | InputMessage String
-    | InputAge String
+    | CheckAcceptPolicy Bool
     | Submit
     | SubmitResponse (Result Http.Error ())
 
@@ -61,8 +61,8 @@ update msg model =
         InputMessage message ->
             ( { model | message = field message }, Cmd.none )
 
-        InputAge age ->
-            ( { model | age = field age }, Cmd.none )
+        CheckAcceptPolicy a ->
+            ( { model | acceptPolicy = field a }, Cmd.none )
 
         Submit ->
             model |> validateModel |> submitIfValid
@@ -91,16 +91,13 @@ validateModel model =
         message =
             model.message |> validate messageValidation
 
-        ageValidation =
-            optional (isNatural "Age should be a natural number")
-
-        age =
-            model.age |> validate ageValidation
+        acceptPolicy =
+            model.acceptPolicy |> validate (isTrue "You must accept policy")
     in
         { model
             | email = email
             , message = message
-            , age = age
+            , acceptPolicy = acceptPolicy
         }
 
 
@@ -111,7 +108,7 @@ submitIfValid model =
             Valid submit
                 |: (validity model.email)
                 |: (validity model.message)
-                |: (validity model.age)
+                |: (validity model.acceptPolicy)
     in
         case submissionResult of
             Valid cmd ->
@@ -121,8 +118,8 @@ submitIfValid model =
                 ( { model | status = NotValid }, Cmd.none )
 
 
-submit : String -> String -> Maybe Int -> Cmd Msg
-submit email message age =
+submit : String -> String -> Bool -> Cmd Msg
+submit email message acceptPolicy =
     let
         url =
             "http://localhost:9292/api/contact"
@@ -131,11 +128,7 @@ submit email message age =
             Encode.object
                 [ ( "email", Encode.string email )
                 , ( "message", Encode.string message )
-                , ( "age"
-                  , age
-                        |> Maybe.map Encode.int
-                        |> Maybe.withDefault Encode.null
-                  )
+                , ( "acceptPolicy", Encode.bool acceptPolicy )
                 ]
 
         decoder =
@@ -230,13 +223,14 @@ body model =
             ]
         , div []
             [ input
-                [ placeholder "your age"
-                , onInput InputAge
-                , value (model.age |> rawValue)
+                [ type_ "checkbox"
+                , onCheck CheckAcceptPolicy
+                , value (model.acceptPolicy |> rawValue |> toString)
                 ]
                 []
-            , errorLabel model.age
+            , label [] [ text "I accept Policy" ]
             ]
+        , div [] [ errorLabel model.acceptPolicy ]
         ]
 
 
