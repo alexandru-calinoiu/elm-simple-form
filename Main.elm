@@ -138,6 +138,7 @@ body model =
                 , type_ "email"
                 , onInput InputEmail
                 , value model.email
+                , required True
                 ]
                 []
             ]
@@ -147,6 +148,7 @@ body model =
                 , rows 7
                 , onInput InputMessage
                 , value model.message
+                , required True
                 ]
                 []
             ]
