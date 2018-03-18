@@ -27,12 +27,22 @@ type Msg
     | InputConfirmPassword String
     | Submit
 
+emailValidation : Validator String String
+emailValidation =
+    isNotEmpty "An email is required" >=> isEmail "Please ensure this is a valid email"
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputEmail email ->
-            ( { model | email = field email }, Cmd.none )
+            ( { model
+                | email =
+                    model.email
+                        |> validate (OnChange email) emailValidation
+              }
+            , Cmd.none
+            )
 
         InputPassword password ->
             ( { model | password = field password }, Cmd.none )
@@ -47,24 +57,21 @@ update msg model =
 validateModel : Model -> Model
 validateModel model =
     let
-        emailValidation =
-            isNotEmpty "An email is required" >=> isEmail "Please ensure this is a valid email"
-
         email =
-            model.email |> validate emailValidation
+            model.email |> validate OnSubmit emailValidation
 
         passwordValidation =
             isNotEmpty "Please fill in a password" >=> isStrongPassword "Must be strong"
 
         password =
-            model.password |> validate passwordValidation
+            model.password |> validate OnSubmit passwordValidation
 
         confirmPasswordValidation =
             isNotEmpty "Please retype this password"
                 >=> isEqualTo password "The passwords do not match"
 
         confirmPassword =
-            model.confirmPassword |> validate confirmPasswordValidation
+            model.confirmPassword |> validate OnSubmit confirmPasswordValidation
     in
         { model
             | email = email

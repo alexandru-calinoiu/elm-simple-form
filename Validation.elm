@@ -7,14 +7,22 @@ type Field raw a
     = Field raw (Validity a)
 
 
+type Event raw
+    = OnSubmit
+    | OnChange raw
+
+
+field : b -> Field b a
 field value =
     Field value NotValidated
 
 
+rawValue : Field b a -> b
 rawValue (Field rawValue _) =
     rawValue
 
 
+validity : Field raw a -> Validity a
 validity (Field _ validity) =
     validity
 
@@ -51,8 +59,30 @@ optional validate s =
             Err s
 
 
-validate : Validator raw a -> Field raw a -> Field raw a
-validate validate (Field value validity) =
+validate : Event raw -> Validator raw a -> Field raw a -> Field raw a
+validate event validate (Field value validity) =
+    case event of
+        OnSubmit ->
+            validateAlways validate (Field value validity)
+
+        OnChange newValue ->
+            validateIfValidated validate (Field newValue validity)
+
+
+validateIfValidated : Validator raw a -> Field raw a -> Field raw a
+validateIfValidated validate (Field value validity) =
+    Field value
+        (case validity of
+            NotValidated ->
+                NotValidated
+
+            _ ->
+                validate value |> toValidity
+        )
+
+
+validateAlways : Validator raw a -> Field raw a -> Field raw a
+validateAlways validate (Field value validity) =
     Field value (validate value |> toValidity)
 
 
