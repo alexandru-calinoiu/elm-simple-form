@@ -55,6 +55,7 @@ validate : Validator raw a -> Field raw a -> Field raw a
 validate validate (Field value validity) =
     Field value (validate value |> toValidity)
 
+
 toValidity : Result String a -> Validity a
 toValidity result =
     case result of
@@ -95,6 +96,16 @@ type alias ErrorMessage =
     String
 
 
+extractError : Field raw a -> Maybe String
+extractError field =
+    case validity field of
+        Invalid err ->
+            Just err
+
+        _ ->
+            Nothing
+
+
 isNotEmpty : ErrorMessage -> Validator String String
 isNotEmpty err value =
     if value == "" then
@@ -133,9 +144,23 @@ isNatural : ErrorMessage -> Validator String Int
 isNatural err =
     isInt err >=> isPositive err
 
+
 isTrue : ErrorMessage -> Validator Bool Bool
 isTrue err value =
     if value then
         Ok value
     else
         Err err
+
+
+isEqualTo : Field raw a -> ErrorMessage -> Validator a a
+isEqualTo otherField err a2 =
+    case validity otherField of
+        Valid a1 ->
+            if a1 == a2 then
+                Ok a2
+            else
+                Err err
+
+        _ ->
+            Ok a2
