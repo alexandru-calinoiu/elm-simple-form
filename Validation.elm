@@ -8,7 +8,17 @@ type Field field
 
 
 type alias Validator input output =
-    input -> Result input output
+    input -> Result String output
+
+
+(>=>) : Validator a b -> Validator b c -> Validator a c
+(>=>) f g a =
+    case a |> f of
+        Ok b ->
+            b |> g
+
+        Err s ->
+            Err s
 
 
 validate : Validator String a -> Field a -> Field a
@@ -66,3 +76,15 @@ isEmail value =
 isInt : Validator String Int
 isInt =
     String.toInt
+
+
+isPositive : Validator Int Int
+isPositive i =
+    if i >= 0 then
+        Ok i
+    else
+        Err "I'm expecting a positive integer"
+
+isNatural : a -> Validator String Int
+isNatural i =
+    isInt >=> isPositive

@@ -77,7 +77,7 @@ update msg model =
 validateModel : Model -> Model
 validateModel model =
     { model
-        | email = model.email |> validate isEmail
+        | email = model.email |> validate (isNotEmpty >=> isEmail)
         , message = model.message |> validate isNotEmpty
     }
 
