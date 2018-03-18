@@ -3,14 +3,30 @@ module Validation exposing (..)
 import Regex
 
 
-type Field field
-    = NotValidated String
-    | Valid field
-    | Invalid String String
+type Field raw a
+    = Field raw (Validity a)
 
 
-type alias OptionalField a =
-    Field (Maybe a)
+field value =
+    Field value NotValidated
+
+
+rawValue (Field rawValue _) =
+    rawValue
+
+
+validity (Field _ validity) =
+    validity
+
+
+type Validity a
+    = NotValidated
+    | Valid a
+    | Invalid String
+
+
+type alias OptionalField raw a =
+    Field raw (Maybe a)
 
 
 type alias Validator a b =
@@ -35,43 +51,42 @@ optional validate s =
             Err s
 
 
-validate : Validator String a -> Field a -> Field a
-validate validator field =
-    case field of
-        NotValidated value ->
-            case validator value of
-                Ok a ->
-                    Valid a
+validate : Validator raw a -> Field raw a -> Field raw a
+validate validate (Field value validity) =
+    Field value (validate value |> toValidity)
 
-                Err err ->
-                    Invalid err value
+toValidity : Result String a -> Validity a
+toValidity result =
+    case result of
+        Ok a ->
+            Valid a
 
-        _ ->
-            field
+        Err err ->
+            Invalid err
 
 
-apply : Field a -> Field (a -> b) -> Field b
+apply : Validity a -> Validity (a -> b) -> Validity b
 apply fa ff =
     case fa of
-        NotValidated s ->
-            NotValidated s
+        NotValidated ->
+            NotValidated
 
-        Invalid err s ->
-            Invalid err s
+        Invalid err ->
+            Invalid err
 
         Valid a ->
             case ff of
-                NotValidated s ->
-                    NotValidated s
+                NotValidated ->
+                    NotValidated
 
-                Invalid err s ->
-                    Invalid err s
+                Invalid err ->
+                    Invalid err
 
                 Valid f ->
                     f a |> Valid
 
 
-(|:) : Field (a -> b) -> Field a -> Field b
+(|:) : Validity (a -> b) -> Validity a -> Validity b
 (|:) ff fa =
     apply fa ff
 

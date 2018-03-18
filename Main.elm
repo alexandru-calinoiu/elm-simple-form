@@ -10,9 +10,9 @@ import Validation exposing (..)
 
 
 type alias Model =
-    { email : Field String
-    , message : Field String
-    , age : OptionalField Int
+    { email : Field String String
+    , message : Field String String
+    , age : OptionalField String Int
     , status : SubmissionStatus
     }
 
@@ -27,9 +27,9 @@ type SubmissionStatus
 
 initialModel : Model
 initialModel =
-    { email = NotValidated ""
-    , message = NotValidated ""
-    , age = NotValidated ""
+    { email = field ""
+    , message = field ""
+    , age = field ""
     , status = NotSubmitted
     }
 
@@ -56,24 +56,19 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputEmail email ->
-            ( { model | email = NotValidated (String.toLower email) }, Cmd.none )
+            ( { model | email = field (String.toLower email) }, Cmd.none )
 
         InputMessage message ->
-            ( { model | message = NotValidated message }, Cmd.none )
+            ( { model | message = field message }, Cmd.none )
 
         InputAge age ->
-            ( { model | age = NotValidated age }, Cmd.none )
+            ( { model | age = field age }, Cmd.none )
 
         Submit ->
             model |> validateModel |> submitIfValid
 
         SubmitResponse (Ok ()) ->
-            ( { model
-                | status = Succeeded
-                , email = NotValidated ""
-                , message = NotValidated ""
-                , age = NotValidated ""
-              }
+            ( { initialModel | status = Succeeded }
             , Cmd.none
             )
 
@@ -86,22 +81,27 @@ validateModel model =
     let
         emailValidation =
             isNotEmpty "An email is required" >=> isEmail "Please ensure this is a valid email"
-        email = model.email |> validate emailValidation
+
+        email =
+            model.email |> validate emailValidation
 
         messageValidation =
             isNotEmpty "An message is required"
-        message = model.message |> validate messageValidation
+
+        message =
+            model.message |> validate messageValidation
 
         ageValidation =
             optional (isNatural "Age should be a natural number")
-        age = model.age |> validate ageValidation
+
+        age =
+            model.age |> validate ageValidation
     in
-        
-    { model
-        | email = email
-        , message = message
-        , age = age
-    }
+        { model
+            | email = email
+            , message = message
+            , age = age
+        }
 
 
 submitIfValid : Model -> ( Model, Cmd Msg )
@@ -109,9 +109,9 @@ submitIfValid model =
     let
         submissionResult =
             Valid submit
-                |: model.email
-                |: model.message
-                |: model.age
+                |: (validity model.email)
+                |: (validity model.message)
+                |: (validity model.age)
     in
         case submissionResult of
             Valid cmd ->
@@ -188,30 +188,17 @@ renderStatus status =
             div [] [ text "Your request failed" ]
 
 
-extractError : Field a -> Maybe String
-extractError value =
-    case value of
-        Invalid err val ->
+extractError : Field raw a -> Maybe String
+extractError field =
+    case validity field of
+        Invalid err ->
             Just err
 
         _ ->
             Nothing
 
 
-displayValue : (a -> String) -> Field a -> String
-displayValue render field =
-    case field of
-        Valid val ->
-            render val
-
-        Invalid err val ->
-            val
-
-        NotValidated val ->
-            val
-
-
-errorLabel : Field a -> Html Msg
+errorLabel : Field raw a -> Html Msg
 errorLabel field =
     label
         [ class "label lable-error" ]
@@ -226,7 +213,7 @@ body model =
                 [ placeholder "your email *"
                 , type_ "email"
                 , onInput InputEmail
-                , value (model.email |> displayValue identity)
+                , value (model.email |> rawValue)
                 ]
                 []
             , errorLabel model.email
@@ -236,7 +223,7 @@ body model =
                 [ placeholder "your message *"
                 , rows 7
                 , onInput InputMessage
-                , value (model.message |> displayValue identity)
+                , value (model.message |> rawValue)
                 ]
                 []
             , errorLabel model.message
@@ -245,7 +232,7 @@ body model =
             [ input
                 [ placeholder "your age"
                 , onInput InputAge
-                , value (model.age |> displayValue (Maybe.map toString >> Maybe.withDefault ""))
+                , value (model.age |> rawValue)
                 ]
                 []
             , errorLabel model.age
