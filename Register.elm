@@ -3,6 +3,7 @@ module Register exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onBlur, onSubmit, onInput)
+import Maybe.Extra exposing (toList)
 import Validation exposing (..)
 
 
@@ -29,6 +30,7 @@ type Msg
     | InputConfirmPassword String
     | BlurConfirmPassword
     | Submit
+
 
 emailValidation : Validator String String
 emailValidation =
@@ -121,8 +123,29 @@ view model =
 header : Model -> Html Msg
 header model =
     div []
-        [ h1 [] [ text "Register" ] ]
+        [ h1 [] [ text "Register" ]
+        , listErrors model
+        ]
+listErrors : Model -> Html msg
+listErrors model =
+    let
+        errors =
+            [ extractError model.email
+            , extractError model.password
+            , extractError model.confirmPassword
+            ] |> List.concatMap toList
+        
+        createListItem s =
+            li [] [ text s ]
+    in
+        case errors of
+            [] ->
+                text ""
 
+            _ ->
+                div []
+                    [ text "Please fix the following errors"
+                    , ul [] (errors |> List.map createListItem)]
 
 errorLabel : Field raw a -> Html Msg
 errorLabel field =
