@@ -10,8 +10,8 @@ import Validation exposing (..)
 
 
 type alias Model =
-    { email : String
-    , message : String
+    { email : Field String
+    , message : Field String
     , status : SubmissionStatus
     }
 
@@ -26,8 +26,8 @@ type SubmissionStatus
 
 initialModel : Model
 initialModel =
-    { email = ""
-    , message = ""
+    { email = NotValidated ""
+    , message = NotValidated ""
     , status = NotSubmitted
     }
 
@@ -53,19 +53,19 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputEmail email ->
-            ( { model | email = String.toLower email }, Cmd.none )
+            ( { model | email = NotValidated (String.toLower email) }, Cmd.none )
 
         InputMessage message ->
-            ( { model | message = message }, Cmd.none )
+            ( { model | message = NotValidated message }, Cmd.none )
 
         Submit ->
-            (submitIfValid model)
+            model |> validateModel |> submitIfValid
 
         SubmitResponse (Ok ()) ->
             ( { model
                 | status = Succeeded
-                , email = ""
-                , message = ""
+                , email = NotValidated ""
+                , message = NotValidated ""
               }
             , Cmd.none
             )
@@ -74,21 +74,28 @@ update msg model =
             ( { model | status = Failed }, Cmd.none )
 
 
+validateModel : Model -> Model
+validateModel model =
+    { model
+        | email = model.email |> validate isEmail
+        , message = model.message |> validate isNotEmpty
+    }
+
+
 submitIfValid : Model -> ( Model, Cmd Msg )
 submitIfValid model =
     let
-        submissionResult : Result String (Cmd Msg)
         submissionResult =
-            Result.map2
+            Validation.map2
                 submit
-                (model.email |> isEmail)
-                (model.message |> isNotEmpty)
+                (model.email)
+                (model.message)
     in
         case submissionResult of
-            Ok cmd ->
+            Valid cmd ->
                 ( { model | status = InProgress }, cmd )
 
-            Err _ ->
+            _ ->
                 ( { model | status = NotValid }, Cmd.none )
 
 
@@ -154,6 +161,36 @@ renderStatus status =
             div [] [ text "Your request failed" ]
 
 
+extractError : Field a -> Maybe String
+extractError value =
+    case value of
+        Invalid err val ->
+            Just err
+
+        _ ->
+            Nothing
+
+
+displayValue : (a -> String) -> Field a -> String
+displayValue render field =
+    case field of
+        Valid val ->
+            render val
+
+        Invalid err val ->
+            val
+
+        NotValidated val ->
+            val
+
+
+errorLabel : Field a -> Html Msg
+errorLabel field =
+    label
+        [ class "label lable-error" ]
+        [ field |> extractError |> Maybe.withDefault "" |> text ]
+
+
 body : Model -> Html Msg
 body model =
     div []
@@ -162,20 +199,20 @@ body model =
                 [ placeholder "your email"
                 , type_ "email"
                 , onInput InputEmail
-                , value model.email
-                , required True
+                , value (model.email |> displayValue identity)
                 ]
                 []
+            , errorLabel model.email
             ]
         , div []
             [ textarea
                 [ placeholder "your message"
                 , rows 7
                 , onInput InputMessage
-                , value model.message
-                , required True
+                , value (model.message |> displayValue identity)
                 ]
                 []
+            , errorLabel model.message
             ]
         ]
 
