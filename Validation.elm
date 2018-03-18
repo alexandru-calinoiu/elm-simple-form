@@ -1,5 +1,7 @@
 module Validation exposing (..)
 
+import Regex
+
 
 type Field field
     = NotValidated String
@@ -74,7 +76,9 @@ apply fa ff =
     apply fa ff
 
 
-type alias ErrorMessage = String
+type alias ErrorMessage =
+    String
+
 
 isNotEmpty : ErrorMessage -> Validator String String
 isNotEmpty err value =
@@ -86,10 +90,15 @@ isNotEmpty err value =
 
 isEmail : ErrorMessage -> Validator String String
 isEmail err value =
-    if String.contains "@" value then
-        Ok value
-    else
-        Err err
+    let
+        regex =
+            Regex.regex "^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+                |> Regex.caseInsensitive
+    in
+        if Regex.contains regex value then
+            Ok value
+        else
+            Err err
 
 
 isInt : ErrorMessage -> Validator String Int
