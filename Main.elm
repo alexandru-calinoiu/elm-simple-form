@@ -12,7 +12,7 @@ import Validation exposing (..)
 type alias Model =
     { email : Field String
     , message : Field String
-    , age : Field Int
+    , age : OptionalField Int
     , status : SubmissionStatus
     }
 
@@ -86,7 +86,7 @@ validateModel model =
     { model
         | email = model.email |> validate (isNotEmpty >=> isEmail)
         , message = model.message |> validate isNotEmpty
-        , age = model.age |> validate isNatural
+        , age = model.age |> validate (optional isNatural)
     }
 
 
@@ -95,9 +95,9 @@ submitIfValid model =
     let
         submissionResult =
             Valid submit
-            |: model.email
-            |: model.message
-            |: model.age
+                |: model.email
+                |: model.message
+                |: model.age
     in
         case submissionResult of
             Valid cmd ->
@@ -107,7 +107,7 @@ submitIfValid model =
                 ( { model | status = NotValid }, Cmd.none )
 
 
-submit : String -> String -> Int -> Cmd Msg
+submit : String -> String -> Maybe Int -> Cmd Msg
 submit email message age =
     let
         url =
@@ -117,7 +117,11 @@ submit email message age =
             Encode.object
                 [ ( "email", Encode.string email )
                 , ( "message", Encode.string message )
-                , ( "age", Encode.int age )
+                , ( "age"
+                  , age
+                        |> Maybe.map Encode.int
+                        |> Maybe.withDefault Encode.null
+                  )
                 ]
 
         decoder =
@@ -205,7 +209,7 @@ body model =
     div []
         [ div []
             [ input
-                [ placeholder "your email"
+                [ placeholder "your email *"
                 , type_ "email"
                 , onInput InputEmail
                 , value (model.email |> displayValue identity)
@@ -215,7 +219,7 @@ body model =
             ]
         , div []
             [ textarea
-                [ placeholder "your message"
+                [ placeholder "your message *"
                 , rows 7
                 , onInput InputMessage
                 , value (model.message |> displayValue identity)
@@ -228,7 +232,7 @@ body model =
                 [ placeholder "your age"
                 , type_ "number"
                 , onInput InputAge
-                , value (model.age |> displayValue toString)
+                , value (model.age |> displayValue (Maybe.map toString >> Maybe.withDefault ""))
                 ]
                 []
             , errorLabel model.age

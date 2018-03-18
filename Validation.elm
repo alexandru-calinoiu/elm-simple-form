@@ -7,8 +7,20 @@ type Field field
     | Invalid String String
 
 
+type alias OptionalField a =
+    Field (Maybe a)
+
+
 type alias Validator a b =
     a -> Result String b
+
+
+optional : Validator String a -> Validator String (Maybe a)
+optional validate s =
+    if s == "" then
+        Ok Nothing
+    else
+        validate s |> Result.map Just
 
 
 (>=>) : Validator a b -> Validator b c -> Validator a c
@@ -56,8 +68,11 @@ apply fa ff =
                 Valid f ->
                     f a |> Valid
 
+
 (|:) : Field (a -> b) -> Field a -> Field b
-(|:) ff fa = apply fa ff
+(|:) ff fa =
+    apply fa ff
+
 
 isNotEmpty : Validator String String
 isNotEmpty value =
