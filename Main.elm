@@ -57,7 +57,13 @@ update msg model =
             ( { model | message = message }, Cmd.none )
 
         Submit ->
-            ( { model | status = InProgress }, submit model )
+            ( { model
+                | status = InProgress
+                , email = ""
+                , message = ""
+              }
+            , submit model
+            )
 
         SubmitResponse (Ok ()) ->
             ( { model | status = Succeeded }, Cmd.none )
@@ -94,7 +100,7 @@ view model =
         [ onSubmit Submit ]
         [ header model
         , body model
-        , footer
+        , footer model
         , div [] [ model |> toString |> text ]
         ]
 
@@ -140,15 +146,16 @@ body model =
                 [ placeholder "your message"
                 , rows 7
                 , onInput InputMessage
+                , value model.message
                 ]
                 []
             ]
         ]
 
 
-footer : Html Msg
-footer =
+footer : Model -> Html Msg
+footer model =
     div []
-        [ button [ type_ "submit" ] [ text "Submit" ]
+        [ button [ type_ "submit", disabled (model.status == InProgress) ] [ text "Submit" ]
         , button [ type_ "button" ] [ text "Concel" ]
         ]
